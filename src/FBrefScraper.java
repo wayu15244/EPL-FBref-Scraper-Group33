@@ -241,6 +241,9 @@ public class FBrefScraper {
             extractExtraStats(match);
             extractHTScoreAndCards(match);
 
+            // Calculate HT score from goal minutes (more reliable than DOM scraping)
+            calculateHTScore(match);
+
             // FALLBACK: Global search for missing advanced stats
             globalKeywordSearch(match);
 
@@ -1108,6 +1111,73 @@ public class FBrefScraper {
     private String getStr(java.util.Map<?, ?> map, String key) {
         Object val = map.get(key);
         return val != null ? val.toString().trim() : "";
+    }
+
+    /**
+     * Calculate HT Score from goal minutes
+     * Counts goals scored in first half (minute <= 45 or 45+)
+     */
+    private void calculateHTScore(MatchData match) {
+        try {
+            int homeHT = 0;
+            int awayHT = 0;
+
+            // Count home goals in first half
+            if (!match.homeGoals.isEmpty()) {
+                String[] goals = match.homeGoals.split(";");
+                for (String goal : goals) {
+                    if (goal.isEmpty())
+                        continue;
+                    String[] parts = goal.split("\\|");
+                    if (parts.length > 1) {
+                        String minute = parts[1].trim().replaceAll("[^0-9+]", "");
+                        if (isFirstHalf(minute)) {
+                            homeHT++;
+                        }
+                    }
+                }
+            }
+
+            // Count away goals in first half
+            if (!match.awayGoals.isEmpty()) {
+                String[] goals = match.awayGoals.split(";");
+                for (String goal : goals) {
+                    if (goal.isEmpty())
+                        continue;
+                    String[] parts = goal.split("\\|");
+                    if (parts.length > 1) {
+                        String minute = parts[1].trim().replaceAll("[^0-9+]", "");
+                        if (isFirstHalf(minute)) {
+                            awayHT++;
+                        }
+                    }
+                }
+            }
+
+            match.halfTimeScore = homeHT + "-" + awayHT;
+        } catch (Exception e) {
+            match.halfTimeScore = "0-0";
+        }
+    }
+
+    /**
+     * Check if minute is in first half (1-45 or 45+)
+     */
+    private boolean isFirstHalf(String minute) {
+        if (minute.isEmpty())
+            return false;
+        try {
+            // Handle "45+2" format
+            if (minute.contains("+")) {
+                String[] parts = minute.split("\\+");
+                int baseMin = Integer.parseInt(parts[0]);
+                return baseMin <= 45;
+            }
+            int min = Integer.parseInt(minute);
+            return min <= 45;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     /**
