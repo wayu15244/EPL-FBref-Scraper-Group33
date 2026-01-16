@@ -1,0 +1,17 @@
+# Compiled Java files
+*.class
+
+# Excel output files
+*.xlsx
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# ChromeDriver logs
+chromedriver.log
