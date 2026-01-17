@@ -22,8 +22,12 @@ import java.time.ZonedDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Random;
 
 /**
  * FBref Premier League Match Scraper
@@ -112,6 +116,7 @@ public class FBrefScraper {
             System.out.println("  (Estimated time: " + estimatedMinutes + " minutes)");
 
             List<MatchData> allMatches = new ArrayList<>();
+            Random random = new Random();
 
             for (int i = 0; i < matchUrls.size(); i++) {
                 // Progress update
@@ -120,23 +125,27 @@ public class FBrefScraper {
                 }
 
                 try {
+                    // Random delay to simulate human behavior (3-6 seconds)
+                    if (i > 0) {
+                        int randomDelay = 3000 + random.nextInt(3000);
+                        sleep(randomDelay);
+                    }
+
                     MatchData match = scrapeMatch(matchUrls.get(i));
                     if (match != null && !match.homeTeam.isEmpty()) {
                         allMatches.add(match);
 
-                        // Debug: print first match details
+                        // Print first match as sample
                         if (i == 0) {
-                            System.out.println("  [DEBUG] First match: " + match.homeTeam + " vs " + match.awayTeam);
-                            System.out.println("          Score: " + match.fullTimeScore);
-                            System.out.println(
-                                    "          Possession: " + match.homePossession + " / " + match.awayPossession);
+                            System.out.println("    First match: " + match.homeTeam + " vs " + match.awayTeam + " ("
+                                    + match.fullTimeScore + ")");
                         }
                     }
                 } catch (Exception e) {
                     System.out.println("    Error on match " + (i + 1) + ": " + e.getMessage());
                 }
 
-                // Polite delay
+                // Base delay between requests
                 sleep(REQUEST_DELAY);
             }
 
@@ -161,20 +170,45 @@ public class FBrefScraper {
     }
 
     /**
-     * Initialize Chrome WebDriver with appropriate options
+     * Initialize Chrome WebDriver with STEALTH options to avoid anti-bot detection
      */
     private void initializeDriver() {
         ChromeOptions options = new ChromeOptions();
+
+        // === STEALTH MODE: Hide automation signals ===
+        // Remove automation flags
+        options.setExperimentalOption("excludeSwitches", Arrays.asList("enable-automation"));
+        options.setExperimentalOption("useAutomationExtension", false);
+        options.addArguments("--disable-blink-features=AutomationControlled");
+
+        // Disable automation-related flags
+        options.addArguments("--disable-infobars");
+        options.addArguments("--disable-dev-shm-usage");
+        options.addArguments("--no-sandbox");
+
+        // Realistic user-agent (Chrome 122)
+        options.addArguments(
+                "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+
+        // Basic options
         options.addArguments("--start-maximized");
         options.addArguments("--disable-notifications");
         options.addArguments("--disable-popup-blocking");
         options.addArguments("--lang=en-GB");
-        options.addArguments(
-                "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+
+        // Disable webdriver flag
+        Map<String, Object> prefs = new HashMap<>();
+        prefs.put("credentials_enable_service", false);
+        prefs.put("profile.password_manager_enabled", false);
+        options.setExperimentalOption("prefs", prefs);
 
         driver = new ChromeDriver(options);
+
+        // Hide webdriver property via JavaScript
         js = (JavascriptExecutor) driver;
-        wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+        js.executeScript("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})");
+
+        wait = new WebDriverWait(driver, Duration.ofSeconds(20));
     }
 
     /**
