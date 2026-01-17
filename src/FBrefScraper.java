@@ -171,9 +171,17 @@ public class FBrefScraper {
 
     /**
      * Initialize Chrome WebDriver with STEALTH options to avoid anti-bot detection
+     * Uses existing Chrome profile to share Cloudflare cookies
      */
     private void initializeDriver() {
         ChromeOptions options = new ChromeOptions();
+
+        // === USE EXISTING CHROME PROFILE (has Cloudflare cookies) ===
+        // IMPORTANT: Close all Chrome windows before running!
+        String userHome = System.getProperty("user.home");
+        String chromeProfilePath = userHome + "\\AppData\\Local\\Google\\Chrome\\User Data";
+        options.addArguments("--user-data-dir=" + chromeProfilePath);
+        options.addArguments("--profile-directory=Default");
 
         // === STEALTH MODE: Hide automation signals ===
         // Remove automation flags
@@ -185,10 +193,7 @@ public class FBrefScraper {
         options.addArguments("--disable-infobars");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--no-sandbox");
-
-        // Realistic user-agent (Chrome 122)
-        options.addArguments(
-                "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+        options.addArguments("--remote-debugging-port=9222");
 
         // Basic options
         options.addArguments("--start-maximized");
@@ -206,7 +211,11 @@ public class FBrefScraper {
 
         // Hide webdriver property via JavaScript
         js = (JavascriptExecutor) driver;
-        js.executeScript("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})");
+        try {
+            js.executeScript("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})");
+        } catch (Exception e) {
+            // Ignore if this fails
+        }
 
         wait = new WebDriverWait(driver, Duration.ofSeconds(20));
     }
