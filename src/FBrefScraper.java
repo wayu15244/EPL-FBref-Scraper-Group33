@@ -171,17 +171,16 @@ public class FBrefScraper {
 
     /**
      * Initialize Chrome WebDriver with STEALTH options to avoid anti-bot detection
-     * Uses existing Chrome profile to share Cloudflare cookies
+     * Uses a custom Chrome profile for the scraper
      */
     private void initializeDriver() {
         ChromeOptions options = new ChromeOptions();
 
-        // === USE EXISTING CHROME PROFILE (has Cloudflare cookies) ===
-        // IMPORTANT: Close all Chrome windows before running!
+        // === USE CUSTOM CHROME PROFILE for scraper ===
+        // This creates a persistent profile that can store cookies
         String userHome = System.getProperty("user.home");
-        String chromeProfilePath = userHome + "\\AppData\\Local\\Google\\Chrome\\User Data";
-        options.addArguments("--user-data-dir=" + chromeProfilePath);
-        options.addArguments("--profile-directory=Default");
+        String scraperProfilePath = userHome + "\\AppData\\Local\\FBrefScraper\\ChromeProfile";
+        options.addArguments("--user-data-dir=" + scraperProfilePath);
 
         // === STEALTH MODE: Hide automation signals ===
         // Remove automation flags
