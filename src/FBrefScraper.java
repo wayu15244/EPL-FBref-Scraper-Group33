@@ -192,7 +192,6 @@ public class FBrefScraper {
         options.addArguments("--disable-infobars");
         options.addArguments("--disable-dev-shm-usage");
         options.addArguments("--no-sandbox");
-        options.addArguments("--remote-debugging-port=9222");
 
         // Basic options
         options.addArguments("--start-maximized");
@@ -1237,6 +1236,11 @@ public class FBrefScraper {
                     "  woodworkHome: '0', woodworkAway: '0', " +
                     "  throughBallsHome: '0', throughBallsAway: '0', " +
                     "  blocksHome: '0', blocksAway: '0', " +
+                    "  clearancesHome: '0', clearancesAway: '0', " +
+                    "  tacklesWonHome: '0', tacklesWonAway: '0', " +
+                    "  aerialsWonHome: '0', aerialsWonAway: '0', " +
+                    "  foulsHome: '0', foulsAway: '0', " +
+                    "  offsidesHome: '0', offsidesAway: '0', " +
                     "  touchesHome: '0', touchesAway: '0', " +
                     "  touchesOppBoxHome: '0', touchesOppBoxAway: '0', " +
                     "  dribblesHome: '0', dribblesAway: '0', " +
@@ -1294,26 +1298,51 @@ public class FBrefScraper {
                     "} " +
 
                     // ========================================================
-                    // BLOCKS: From defense tables
-                    // data-stat="blocks"
+                    // BLOCKS, CLEARANCES, TACKLES: From defense tables
+                    // data-stat: blocks, clearances, tackles_won
                     // ========================================================
                     "var defenseTables = document.querySelectorAll('table[id*=\"defense\"]'); " +
-                    "var blocksValues = []; " +
+                    "var blocksValues = [], clearancesValues = [], tacklesWonValues = []; " +
                     "defenseTables.forEach(function(table) { " +
                     "  var tfoot = table.querySelector('tfoot'); " +
                     "  if (tfoot) { " +
                     "    var blocksCell = tfoot.querySelector('td[data-stat=\"blocks\"]'); " +
-                    "    if (blocksCell) { " +
-                    "      blocksValues.push(blocksCell.textContent.trim() || '0'); " +
-                    "    } " +
+                    "    var clearancesCell = tfoot.querySelector('td[data-stat=\"clearances\"]'); " +
+                    "    var tacklesWonCell = tfoot.querySelector('td[data-stat=\"tackles_won\"]'); " +
+                    "    if (blocksCell) blocksValues.push(blocksCell.textContent.trim() || '0'); " +
+                    "    if (clearancesCell) clearancesValues.push(clearancesCell.textContent.trim() || '0'); " +
+                    "    if (tacklesWonCell) tacklesWonValues.push(tacklesWonCell.textContent.trim() || '0'); " +
                     "  } " +
                     "}); " +
-                    "if (blocksValues.length >= 2) { " +
-                    "  result.blocksHome = blocksValues[0]; " +
-                    "  result.blocksAway = blocksValues[1]; " +
-                    "} else if (blocksValues.length === 1) { " +
-                    "  result.blocksHome = blocksValues[0]; " +
-                    "} " +
+                    "if (blocksValues.length >= 2) { result.blocksHome = blocksValues[0]; result.blocksAway = blocksValues[1]; } "
+                    +
+                    "if (clearancesValues.length >= 2) { result.clearancesHome = clearancesValues[0]; result.clearancesAway = clearancesValues[1]; } "
+                    +
+                    "if (tacklesWonValues.length >= 2) { result.tacklesWonHome = tacklesWonValues[0]; result.tacklesWonAway = tacklesWonValues[1]; } "
+                    +
+
+                    // ========================================================
+                    // MISC TABLE: aerials_won, fouls, offsides
+                    // ========================================================
+                    "var miscTables = document.querySelectorAll('table[id*=\"misc\"]'); " +
+                    "var aerialsValues = [], foulsValues = [], offsidesValues = []; " +
+                    "miscTables.forEach(function(table) { " +
+                    "  var tfoot = table.querySelector('tfoot'); " +
+                    "  if (tfoot) { " +
+                    "    var aerialsCell = tfoot.querySelector('td[data-stat=\"aerials_won\"]'); " +
+                    "    var foulsCell = tfoot.querySelector('td[data-stat=\"fouls\"]'); " +
+                    "    var offsidesCell = tfoot.querySelector('td[data-stat=\"offsides\"]'); " +
+                    "    if (aerialsCell) aerialsValues.push(aerialsCell.textContent.trim() || '0'); " +
+                    "    if (foulsCell) foulsValues.push(foulsCell.textContent.trim() || '0'); " +
+                    "    if (offsidesCell) offsidesValues.push(offsidesCell.textContent.trim() || '0'); " +
+                    "  } " +
+                    "}); " +
+                    "if (aerialsValues.length >= 2) { result.aerialsWonHome = aerialsValues[0]; result.aerialsWonAway = aerialsValues[1]; } "
+                    +
+                    "if (foulsValues.length >= 2) { result.foulsHome = foulsValues[0]; result.foulsAway = foulsValues[1]; } "
+                    +
+                    "if (offsidesValues.length >= 2) { result.offsidesHome = offsidesValues[0]; result.offsidesAway = offsidesValues[1]; } "
+                    +
 
                     // ========================================================
                     // BIG CHANCES: Count shots with xG >= 0.35
@@ -1451,6 +1480,53 @@ public class FBrefScraper {
                         && !foundDribblesCompHome.isEmpty()) {
                     match.homeDribblesCompleted = foundDribblesCompHome;
                     match.awayDribblesCompleted = foundDribblesCompAway;
+                }
+
+                // === DEFENCE STATS (From Defense Table) ===
+                // Clearances
+                String foundClearancesHome = getStr(data, "clearancesHome");
+                String foundClearancesAway = getStr(data, "clearancesAway");
+                if ((match.homeClearances.isEmpty() || match.homeClearances.equals("0"))
+                        && !foundClearancesHome.equals("0") && !foundClearancesHome.isEmpty()) {
+                    match.homeClearances = foundClearancesHome;
+                    match.awayClearances = foundClearancesAway;
+                }
+
+                // Tackles Won
+                String foundTacklesHome = getStr(data, "tacklesWonHome");
+                String foundTacklesAway = getStr(data, "tacklesWonAway");
+                if ((match.homeTackles.isEmpty() || match.homeTackles.equals("0"))
+                        && !foundTacklesHome.equals("0") && !foundTacklesHome.isEmpty()) {
+                    match.homeTackles = foundTacklesHome;
+                    match.awayTackles = foundTacklesAway;
+                }
+
+                // === MISC STATS (From Misc Table) ===
+                // Aerials Won
+                String foundAerialsHome = getStr(data, "aerialsWonHome");
+                String foundAerialsAway = getStr(data, "aerialsWonAway");
+                if ((match.homeAerials.isEmpty() || match.homeAerials.equals("0"))
+                        && !foundAerialsHome.equals("0") && !foundAerialsHome.isEmpty()) {
+                    match.homeAerials = foundAerialsHome;
+                    match.awayAerials = foundAerialsAway;
+                }
+
+                // Fouls
+                String foundFoulsHome = getStr(data, "foulsHome");
+                String foundFoulsAway = getStr(data, "foulsAway");
+                if ((match.homeFouls.isEmpty() || match.homeFouls.equals("0"))
+                        && !foundFoulsHome.equals("0") && !foundFoulsHome.isEmpty()) {
+                    match.homeFouls = foundFoulsHome;
+                    match.awayFouls = foundFoulsAway;
+                }
+
+                // Offsides
+                String foundOffsidesHome = getStr(data, "offsidesHome");
+                String foundOffsidesAway = getStr(data, "offsidesAway");
+                if ((match.homeOffsides.isEmpty() || match.homeOffsides.equals("0"))
+                        && !foundOffsidesHome.equals("0") && !foundOffsidesHome.isEmpty()) {
+                    match.homeOffsides = foundOffsidesHome;
+                    match.awayOffsides = foundOffsidesAway;
                 }
             }
         } catch (Exception e) {
