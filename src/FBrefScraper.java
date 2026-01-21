@@ -176,11 +176,12 @@ public class FBrefScraper {
     private void initializeDriver() {
         ChromeOptions options = new ChromeOptions();
 
-        // === USE CUSTOM CHROME PROFILE for scraper ===
-        // This creates a persistent profile that can store cookies
-        String userHome = System.getProperty("user.home");
-        String scraperProfilePath = userHome + "\\AppData\\Local\\FBrefScraper\\ChromeProfile_v2";
-        options.addArguments("--user-data-dir=" + scraperProfilePath);
+        // === USE TEMPORARY PROFILE for stability ===
+        // Note: Using a temporary profile (default) avoids 'SessionNotCreatedException'
+        // caused by locked user data directories or zombie Chrome processes.
+
+        options.addArguments("--remote-allow-origins=*");
+        options.addArguments("--disable-gpu");
 
         // === STEALTH MODE: Hide automation signals ===
         // Remove automation flags
