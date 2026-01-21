@@ -1720,16 +1720,17 @@ public class FBrefScraper {
             }
         }
 
-        // ========== ZONE B: Match Info & Officials (Cols E-F) ==========
+        // ========== ZONE B: SPLIT LAYOUT (Professor's Template) ==========
+        // LEFT BLOCK (Cols E-F): Match Details
         // Row 1: Header
         if (row1.getCell(4) == null)
             row1.createCell(4);
-        row1.getCell(4).setCellValue("Match Info & Officials");
+        row1.getCell(4).setCellValue("Match Details");
         row1.getCell(4).setCellStyle(headerStyle);
         sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(1, 1, 4, 5));
 
-        // Row 2: Date
-        row2.createCell(4).setCellValue("Date:");
+        // Row 2: Kickoff (Date/Time)
+        row2.createCell(4).setCellValue("Kickoff:");
         row2.createCell(5).setCellValue(m.dateTime);
         row2.getCell(4).setCellStyle(labelStyle);
 
@@ -1744,29 +1745,35 @@ public class FBrefScraper {
         row4b.createCell(5).setCellValue(m.attendance);
         row4b.getCell(4).setCellStyle(labelStyle);
 
-        // Row 5: Referee
+        // Row 5: Match Officials Header (separate section)
         XSSFRow row5b = getOrCreateRow(sheet, 5);
-        row5b.createCell(4).setCellValue("Referee:");
-        row5b.createCell(5).setCellValue(m.referee);
-        row5b.getCell(4).setCellStyle(labelStyle);
+        row5b.createCell(4).setCellValue("Match Officials");
+        row5b.getCell(4).setCellStyle(headerStyle);
+        sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(5, 5, 4, 5));
 
-        // Row 6: Assistant Refs
+        // Row 6: Referee
         XSSFRow row6 = getOrCreateRow(sheet, 6);
-        row6.createCell(4).setCellValue("AR:");
-        row6.createCell(5).setCellValue(m.assistantRefs);
+        row6.createCell(4).setCellValue("Referee:");
+        row6.createCell(5).setCellValue(m.referee);
         row6.getCell(4).setCellStyle(labelStyle);
 
-        // Row 7: 4th Official
+        // Row 7: Assistant Refs
         XSSFRow row7 = getOrCreateRow(sheet, 7);
-        row7.createCell(4).setCellValue("4th:");
-        row7.createCell(5).setCellValue(m.fourthOfficial);
+        row7.createCell(4).setCellValue("Assistant Ref:");
+        row7.createCell(5).setCellValue(m.assistantRefs);
         row7.getCell(4).setCellStyle(labelStyle);
 
-        // Row 8: VAR
+        // Row 8: Fourth Official
         XSSFRow row8x = getOrCreateRow(sheet, 8);
-        row8x.createCell(4).setCellValue("VAR:");
-        row8x.createCell(5).setCellValue(m.varOfficial);
+        row8x.createCell(4).setCellValue("Fourth Official:");
+        row8x.createCell(5).setCellValue(m.fourthOfficial);
         row8x.getCell(4).setCellStyle(labelStyle);
+
+        // Row 9: VAR
+        XSSFRow row9x = getOrCreateRow(sheet, 9);
+        row9x.createCell(4).setCellValue("VAR:");
+        row9x.createCell(5).setCellValue(m.varOfficial);
+        row9x.getCell(4).setCellStyle(labelStyle);
 
         // ========== ZONE C: Lineups (Cols H-I, Rows 1-15) ==========
         // Row 1: Header
