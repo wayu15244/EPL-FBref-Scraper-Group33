@@ -1236,8 +1236,40 @@ public class FBrefScraper {
                     "  bigChancesHome: '0', bigChancesAway: '0', " +
                     "  woodworkHome: '0', woodworkAway: '0', " +
                     "  throughBallsHome: '0', throughBallsAway: '0', " +
-                    "  blocksHome: '0', blocksAway: '0' " +
+                    "  blocksHome: '0', blocksAway: '0', " +
+                    "  touchesHome: '0', touchesAway: '0', " +
+                    "  touchesOppBoxHome: '0', touchesOppBoxAway: '0', " +
+                    "  dribblesHome: '0', dribblesAway: '0', " +
+                    "  dribblesCompletedHome: '0', dribblesCompletedAway: '0' " +
                     "}; " +
+
+                    // ========================================================
+                    // PHYSICAL STATS: From possession tables
+                    // data-stat: touches, touches_att_pen_area, dribbles, dribbles_completed
+                    // ========================================================
+                    "var possessionTables = document.querySelectorAll('table[id*=\"possession\"]'); " +
+                    "var touchesVals = [], touchesOppVals = [], dribblesVals = [], dribblesCompVals = []; " +
+                    "possessionTables.forEach(function(table) { " +
+                    "  var tfoot = table.querySelector('tfoot'); " +
+                    "  if (tfoot) { " +
+                    "    var touchesCell = tfoot.querySelector('td[data-stat=\"touches\"]'); " +
+                    "    var touchesOppCell = tfoot.querySelector('td[data-stat=\"touches_att_pen_area\"]'); " +
+                    "    var dribblesCell = tfoot.querySelector('td[data-stat=\"dribbles\"]'); " +
+                    "    var dribblesCompCell = tfoot.querySelector('td[data-stat=\"dribbles_completed\"]'); " +
+                    "    if (touchesCell) touchesVals.push(touchesCell.textContent.trim() || '0'); " +
+                    "    if (touchesOppCell) touchesOppVals.push(touchesOppCell.textContent.trim() || '0'); " +
+                    "    if (dribblesCell) dribblesVals.push(dribblesCell.textContent.trim() || '0'); " +
+                    "    if (dribblesCompCell) dribblesCompVals.push(dribblesCompCell.textContent.trim() || '0'); " +
+                    "  } " +
+                    "}); " +
+                    "if (touchesVals.length >= 2) { result.touchesHome = touchesVals[0]; result.touchesAway = touchesVals[1]; } "
+                    +
+                    "if (touchesOppVals.length >= 2) { result.touchesOppBoxHome = touchesOppVals[0]; result.touchesOppBoxAway = touchesOppVals[1]; } "
+                    +
+                    "if (dribblesVals.length >= 2) { result.dribblesHome = dribblesVals[0]; result.dribblesAway = dribblesVals[1]; } "
+                    +
+                    "if (dribblesCompVals.length >= 2) { result.dribblesCompletedHome = dribblesCompVals[0]; result.dribblesCompletedAway = dribblesCompVals[1]; } "
+                    +
 
                     // ========================================================
                     // THROUGH BALLS: From passing_types tables
@@ -1384,6 +1416,41 @@ public class FBrefScraper {
                 if ((match.homeWoodwork.isEmpty() || match.homeWoodwork.equals("0"))) {
                     match.homeWoodwork = foundWoodworkHome.isEmpty() ? "0" : foundWoodworkHome;
                     match.awayWoodwork = foundWoodworkAway.isEmpty() ? "0" : foundWoodworkAway;
+                }
+
+                // === PHYSICAL STATS (NEW) ===
+                // Touches
+                String foundTouchesHome = getStr(data, "touchesHome");
+                String foundTouchesAway = getStr(data, "touchesAway");
+                if (match.homeTouches.isEmpty() && !foundTouchesHome.equals("0") && !foundTouchesHome.isEmpty()) {
+                    match.homeTouches = foundTouchesHome;
+                    match.awayTouches = foundTouchesAway;
+                }
+
+                // Touches in Opp Box
+                String foundTouchesOppHome = getStr(data, "touchesOppBoxHome");
+                String foundTouchesOppAway = getStr(data, "touchesOppBoxAway");
+                if (match.homeTouchesOppBox.isEmpty() && !foundTouchesOppHome.equals("0")
+                        && !foundTouchesOppHome.isEmpty()) {
+                    match.homeTouchesOppBox = foundTouchesOppHome;
+                    match.awayTouchesOppBox = foundTouchesOppAway;
+                }
+
+                // Dribbles
+                String foundDribblesHome = getStr(data, "dribblesHome");
+                String foundDribblesAway = getStr(data, "dribblesAway");
+                if (match.homeDribbles.isEmpty() && !foundDribblesHome.equals("0") && !foundDribblesHome.isEmpty()) {
+                    match.homeDribbles = foundDribblesHome;
+                    match.awayDribbles = foundDribblesAway;
+                }
+
+                // Successful Dribbles
+                String foundDribblesCompHome = getStr(data, "dribblesCompletedHome");
+                String foundDribblesCompAway = getStr(data, "dribblesCompletedAway");
+                if (match.homeDribblesCompleted.isEmpty() && !foundDribblesCompHome.equals("0")
+                        && !foundDribblesCompHome.isEmpty()) {
+                    match.homeDribblesCompleted = foundDribblesCompHome;
+                    match.awayDribblesCompleted = foundDribblesCompAway;
                 }
             }
         } catch (Exception e) {
@@ -1781,222 +1848,285 @@ public class FBrefScraper {
         row1.getCell(11).setCellStyle(headerStyle);
         row1.getCell(12).setCellStyle(headerStyle);
 
+        // === Zone D: Stats with CORRECT ORDER ===
+        // ORDER: Top Stats → Attack → Possession → Defence → Physical → Discipline
+        int statRow = 2;
+
         // === TOP STATS === (Header)
-        row2.createCell(10).setCellValue("");
-        row2.createCell(11).setCellValue("--- TOP STATS ---");
-        row2.createCell(12).setCellValue("");
-        row2.getCell(11).setCellStyle(headerStyle);
+        XSSFRow topHeader = getOrCreateRow(sheet, statRow++);
+        topHeader.createCell(10).setCellValue("");
+        topHeader.createCell(11).setCellValue("--- TOP STATS ---");
+        topHeader.createCell(12).setCellValue("");
+        topHeader.getCell(11).setCellStyle(headerStyle);
 
-        // Row 3: Possession
-        row3.createCell(10).setCellValue(m.homePossession);
-        row3.createCell(11).setCellValue("Possession");
-        row3.createCell(12).setCellValue(m.awayPossession);
-        row3.getCell(10).setCellStyle(centeredStyle);
-        row3.getCell(11).setCellStyle(labelStyle);
-        row3.getCell(12).setCellStyle(centeredStyle);
+        // Possession
+        XSSFRow s1 = getOrCreateRow(sheet, statRow++);
+        s1.createCell(10).setCellValue(m.homePossession);
+        s1.createCell(11).setCellValue("Possession");
+        s1.createCell(12).setCellValue(m.awayPossession);
+        s1.getCell(10).setCellStyle(centeredStyle);
+        s1.getCell(11).setCellStyle(labelStyle);
+        s1.getCell(12).setCellStyle(centeredStyle);
 
-        // Row 4: xG (Expected Goals)
-        row4.createCell(10).setCellValue(m.homeXG);
-        row4.createCell(11).setCellValue("xG");
-        row4.createCell(12).setCellValue(m.awayXG);
-        row4.getCell(10).setCellStyle(centeredStyle);
-        row4.getCell(11).setCellStyle(labelStyle);
-        row4.getCell(12).setCellStyle(centeredStyle);
+        // xG
+        XSSFRow s2 = getOrCreateRow(sheet, statRow++);
+        s2.createCell(10).setCellValue(m.homeXG);
+        s2.createCell(11).setCellValue("xG");
+        s2.createCell(12).setCellValue(m.awayXG);
+        s2.getCell(10).setCellStyle(centeredStyle);
+        s2.getCell(11).setCellStyle(labelStyle);
+        s2.getCell(12).setCellStyle(centeredStyle);
 
-        // Row 5: Total Shots
-        row5.createCell(10).setCellValue(m.homeTotalShots);
-        row5.createCell(11).setCellValue("Total Shots");
-        row5.createCell(12).setCellValue(m.awayTotalShots);
-        row5.getCell(10).setCellStyle(centeredStyle);
-        row5.getCell(11).setCellStyle(labelStyle);
-        row5.getCell(12).setCellStyle(centeredStyle);
+        // Total Shots
+        XSSFRow s3 = getOrCreateRow(sheet, statRow++);
+        s3.createCell(10).setCellValue(m.homeTotalShots);
+        s3.createCell(11).setCellValue("Total Shots");
+        s3.createCell(12).setCellValue(m.awayTotalShots);
+        s3.getCell(10).setCellStyle(centeredStyle);
+        s3.getCell(11).setCellStyle(labelStyle);
+        s3.getCell(12).setCellStyle(centeredStyle);
 
-        // Row 6: Shots on Target
-        row6.createCell(10).setCellValue(m.homeShotsOnTarget);
-        row6.createCell(11).setCellValue("Shots on Target");
-        row6.createCell(12).setCellValue(m.awayShotsOnTarget);
-        row6.getCell(10).setCellStyle(centeredStyle);
-        row6.getCell(11).setCellStyle(labelStyle);
-        row6.getCell(12).setCellStyle(centeredStyle);
-
-        // === ATTACK === (Header) - MOVED UP IN ORDER
-        row7.createCell(10).setCellValue("");
-        row7.createCell(11).setCellValue("--- ATTACK ---");
-        row7.createCell(12).setCellValue("");
-        row7.getCell(11).setCellStyle(headerStyle);
-
-        // Row 8: Big Chances
-        row8x.createCell(10).setCellValue(m.homeBigChances.isEmpty() ? "0" : m.homeBigChances);
-        row8x.createCell(11).setCellValue("Big Chances");
-        row8x.createCell(12).setCellValue(m.awayBigChances.isEmpty() ? "0" : m.awayBigChances);
-        row8x.getCell(10).setCellStyle(centeredStyle);
-        row8x.getCell(11).setCellStyle(labelStyle);
-        row8x.getCell(12).setCellStyle(centeredStyle);
-
-        // Row 9: Hit Woodwork
-        XSSFRow row9 = getOrCreateRow(sheet, 9);
-        row9.createCell(10).setCellValue(m.homeWoodwork.isEmpty() ? "0" : m.homeWoodwork);
-        row9.createCell(11).setCellValue("Hit Woodwork");
-        row9.createCell(12).setCellValue(m.awayWoodwork.isEmpty() ? "0" : m.awayWoodwork);
-        row9.getCell(10).setCellStyle(centeredStyle);
-        row9.getCell(11).setCellStyle(labelStyle);
-        row9.getCell(12).setCellStyle(centeredStyle);
-
-        // Row 10: Yellow Cards
-        XSSFRow row10 = getOrCreateRow(sheet, 10);
-        row10.createCell(10).setCellValue(m.homeYellowCards);
-        row10.createCell(11).setCellValue("Yellow Cards");
-        row10.createCell(12).setCellValue(m.awayYellowCards);
-        row10.getCell(10).setCellStyle(centeredStyle);
-        row10.getCell(11).setCellStyle(labelStyle);
-        row10.getCell(12).setCellStyle(centeredStyle);
-
-        // Row 11: Red Cards
-        XSSFRow row11 = getOrCreateRow(sheet, 11);
-        row11.createCell(10).setCellValue(m.homeRedCards);
-        row11.createCell(11).setCellValue("Red Cards");
-        row11.createCell(12).setCellValue(m.awayRedCards);
-        row11.getCell(10).setCellStyle(centeredStyle);
-        row11.getCell(11).setCellStyle(labelStyle);
-        row11.getCell(12).setCellStyle(centeredStyle);
+        // Shots on Target
+        XSSFRow s4 = getOrCreateRow(sheet, statRow++);
+        s4.createCell(10).setCellValue(m.homeShotsOnTarget);
+        s4.createCell(11).setCellValue("Shots on Target");
+        s4.createCell(12).setCellValue(m.awayShotsOnTarget);
+        s4.getCell(10).setCellStyle(centeredStyle);
+        s4.getCell(11).setCellStyle(labelStyle);
+        s4.getCell(12).setCellStyle(centeredStyle);
 
         // === ATTACK === (Header)
-        XSSFRow row12 = getOrCreateRow(sheet, 12);
-        row12.createCell(10).setCellValue("");
-        row12.createCell(11).setCellValue("--- ATTACK ---");
-        row12.createCell(12).setCellValue("");
-        row12.getCell(11).setCellStyle(headerStyle);
+        XSSFRow attackHeader = getOrCreateRow(sheet, statRow++);
+        attackHeader.createCell(10).setCellValue("");
+        attackHeader.createCell(11).setCellValue("--- ATTACK ---");
+        attackHeader.createCell(12).setCellValue("");
+        attackHeader.getCell(11).setCellStyle(headerStyle);
 
-        // Row 13: Big Chances
-        XSSFRow row13 = getOrCreateRow(sheet, 13);
-        row13.createCell(10).setCellValue(m.homeBigChances.isEmpty() ? "0" : m.homeBigChances);
-        row13.createCell(11).setCellValue("Big Chances");
-        row13.createCell(12).setCellValue(m.awayBigChances.isEmpty() ? "0" : m.awayBigChances);
-        row13.getCell(10).setCellStyle(centeredStyle);
-        row13.getCell(11).setCellStyle(labelStyle);
-        row13.getCell(12).setCellStyle(centeredStyle);
+        // Big Chances
+        XSSFRow s5 = getOrCreateRow(sheet, statRow++);
+        s5.createCell(10).setCellValue(m.homeBigChances.isEmpty() ? "0" : m.homeBigChances);
+        s5.createCell(11).setCellValue("Big Chances");
+        s5.createCell(12).setCellValue(m.awayBigChances.isEmpty() ? "0" : m.awayBigChances);
+        s5.getCell(10).setCellStyle(centeredStyle);
+        s5.getCell(11).setCellStyle(labelStyle);
+        s5.getCell(12).setCellStyle(centeredStyle);
 
-        // Row 14: Hit Woodwork
-        XSSFRow row14 = getOrCreateRow(sheet, 14);
-        row14.createCell(10).setCellValue(m.homeWoodwork.isEmpty() ? "0" : m.homeWoodwork);
-        row14.createCell(11).setCellValue("Hit Woodwork");
-        row14.createCell(12).setCellValue(m.awayWoodwork.isEmpty() ? "0" : m.awayWoodwork);
-        row14.getCell(10).setCellStyle(centeredStyle);
-        row14.getCell(11).setCellStyle(labelStyle);
-        row14.getCell(12).setCellStyle(centeredStyle);
+        // Hit Woodwork
+        XSSFRow s6 = getOrCreateRow(sheet, statRow++);
+        s6.createCell(10).setCellValue(m.homeWoodwork.isEmpty() ? "0" : m.homeWoodwork);
+        s6.createCell(11).setCellValue("Hit Woodwork");
+        s6.createCell(12).setCellValue(m.awayWoodwork.isEmpty() ? "0" : m.awayWoodwork);
+        s6.getCell(10).setCellStyle(centeredStyle);
+        s6.getCell(11).setCellStyle(labelStyle);
+        s6.getCell(12).setCellStyle(centeredStyle);
 
-        // Row 15: Corners
-        XSSFRow row15 = getOrCreateRow(sheet, 15);
-        row15.createCell(10).setCellValue(m.homeCorners);
-        row15.createCell(11).setCellValue("Corners");
-        row15.createCell(12).setCellValue(m.awayCorners);
-        row15.getCell(10).setCellStyle(centeredStyle);
-        row15.getCell(11).setCellStyle(labelStyle);
-        row15.getCell(12).setCellStyle(centeredStyle);
+        // Corners
+        XSSFRow s7 = getOrCreateRow(sheet, statRow++);
+        s7.createCell(10).setCellValue(m.homeCorners);
+        s7.createCell(11).setCellValue("Corners");
+        s7.createCell(12).setCellValue(m.awayCorners);
+        s7.getCell(10).setCellStyle(centeredStyle);
+        s7.getCell(11).setCellStyle(labelStyle);
+        s7.getCell(12).setCellStyle(centeredStyle);
+
+        // Crosses
+        XSSFRow s8 = getOrCreateRow(sheet, statRow++);
+        s8.createCell(10).setCellValue(m.homeCrosses.isEmpty() ? "0" : m.homeCrosses);
+        s8.createCell(11).setCellValue("Crosses");
+        s8.createCell(12).setCellValue(m.awayCrosses.isEmpty() ? "0" : m.awayCrosses);
+        s8.getCell(10).setCellStyle(centeredStyle);
+        s8.getCell(11).setCellStyle(labelStyle);
+        s8.getCell(12).setCellStyle(centeredStyle);
 
         // === POSSESSION === (Header)
-        XSSFRow row16 = getOrCreateRow(sheet, 16);
-        row16.createCell(10).setCellValue("");
-        row16.createCell(11).setCellValue("--- POSSESSION ---");
-        row16.createCell(12).setCellValue("");
-        row16.getCell(11).setCellStyle(headerStyle);
+        XSSFRow possHeader = getOrCreateRow(sheet, statRow++);
+        possHeader.createCell(10).setCellValue("");
+        possHeader.createCell(11).setCellValue("--- POSSESSION ---");
+        possHeader.createCell(12).setCellValue("");
+        possHeader.getCell(11).setCellStyle(headerStyle);
 
-        // Row 17: Passes
-        XSSFRow row17 = getOrCreateRow(sheet, 17);
-        row17.createCell(10).setCellValue(m.homePasses);
-        row17.createCell(11).setCellValue("Passes");
-        row17.createCell(12).setCellValue(m.awayPasses);
-        row17.getCell(10).setCellStyle(centeredStyle);
-        row17.getCell(11).setCellStyle(labelStyle);
-        row17.getCell(12).setCellStyle(centeredStyle);
+        // Passes
+        XSSFRow s9 = getOrCreateRow(sheet, statRow++);
+        s9.createCell(10).setCellValue(m.homePasses);
+        s9.createCell(11).setCellValue("Passes");
+        s9.createCell(12).setCellValue(m.awayPasses);
+        s9.getCell(10).setCellStyle(centeredStyle);
+        s9.getCell(11).setCellStyle(labelStyle);
+        s9.getCell(12).setCellStyle(centeredStyle);
 
-        // Row 18: Crosses
-        XSSFRow row18 = getOrCreateRow(sheet, 18);
-        row18.createCell(10).setCellValue(m.homeCrosses.isEmpty() ? "0" : m.homeCrosses);
-        row18.createCell(11).setCellValue("Crosses");
-        row18.createCell(12).setCellValue(m.awayCrosses.isEmpty() ? "0" : m.awayCrosses);
-        row18.getCell(10).setCellStyle(centeredStyle);
-        row18.getCell(11).setCellStyle(labelStyle);
-        row18.getCell(12).setCellStyle(centeredStyle);
+        // Long Balls
+        XSSFRow s10 = getOrCreateRow(sheet, statRow++);
+        s10.createCell(10).setCellValue(m.homeLongBalls.isEmpty() ? "0" : m.homeLongBalls);
+        s10.createCell(11).setCellValue("Long Balls");
+        s10.createCell(12).setCellValue(m.awayLongBalls.isEmpty() ? "0" : m.awayLongBalls);
+        s10.getCell(10).setCellStyle(centeredStyle);
+        s10.getCell(11).setCellStyle(labelStyle);
+        s10.getCell(12).setCellStyle(centeredStyle);
 
-        // Row 19: Long Balls
-        XSSFRow row19 = getOrCreateRow(sheet, 19);
-        row19.createCell(10).setCellValue(m.homeLongBalls.isEmpty() ? "0" : m.homeLongBalls);
-        row19.createCell(11).setCellValue("Long Balls");
-        row19.createCell(12).setCellValue(m.awayLongBalls.isEmpty() ? "0" : m.awayLongBalls);
-        row19.getCell(10).setCellStyle(centeredStyle);
-        row19.getCell(11).setCellStyle(labelStyle);
-        row19.getCell(12).setCellStyle(centeredStyle);
+        // Through Balls
+        XSSFRow s11 = getOrCreateRow(sheet, statRow++);
+        s11.createCell(10).setCellValue(m.homeThroughBalls.isEmpty() ? "0" : m.homeThroughBalls);
+        s11.createCell(11).setCellValue("Through Balls");
+        s11.createCell(12).setCellValue(m.awayThroughBalls.isEmpty() ? "0" : m.awayThroughBalls);
+        s11.getCell(10).setCellStyle(centeredStyle);
+        s11.getCell(11).setCellStyle(labelStyle);
+        s11.getCell(12).setCellStyle(centeredStyle);
 
-        // Row 20: Through Balls (REQUIRED by Professor's Template)
-        XSSFRow row20 = getOrCreateRow(sheet, 20);
-        row20.createCell(10).setCellValue(m.homeThroughBalls.isEmpty() ? "0" : m.homeThroughBalls);
-        row20.createCell(11).setCellValue("Through Balls");
-        row20.createCell(12).setCellValue(m.awayThroughBalls.isEmpty() ? "0" : m.awayThroughBalls);
-        row20.getCell(10).setCellStyle(centeredStyle);
-        row20.getCell(11).setCellStyle(labelStyle);
-        row20.getCell(12).setCellStyle(centeredStyle);
+        // Touches
+        XSSFRow s12 = getOrCreateRow(sheet, statRow++);
+        s12.createCell(10).setCellValue(m.homeTouches.isEmpty() ? "0" : m.homeTouches);
+        s12.createCell(11).setCellValue("Touches");
+        s12.createCell(12).setCellValue(m.awayTouches.isEmpty() ? "0" : m.awayTouches);
+        s12.getCell(10).setCellStyle(centeredStyle);
+        s12.getCell(11).setCellStyle(labelStyle);
+        s12.getCell(12).setCellStyle(centeredStyle);
+
+        // Touches in Opp Box
+        XSSFRow s13 = getOrCreateRow(sheet, statRow++);
+        s13.createCell(10).setCellValue(m.homeTouchesOppBox.isEmpty() ? "0" : m.homeTouchesOppBox);
+        s13.createCell(11).setCellValue("Touches in Opp Box");
+        s13.createCell(12).setCellValue(m.awayTouchesOppBox.isEmpty() ? "0" : m.awayTouchesOppBox);
+        s13.getCell(10).setCellStyle(centeredStyle);
+        s13.getCell(11).setCellStyle(labelStyle);
+        s13.getCell(12).setCellStyle(centeredStyle);
 
         // === DEFENCE === (Header)
-        XSSFRow row21 = getOrCreateRow(sheet, 21);
-        row21.createCell(10).setCellValue("");
-        row21.createCell(11).setCellValue("--- DEFENCE ---");
-        row21.createCell(12).setCellValue("");
-        row21.getCell(11).setCellStyle(headerStyle);
+        XSSFRow defHeader = getOrCreateRow(sheet, statRow++);
+        defHeader.createCell(10).setCellValue("");
+        defHeader.createCell(11).setCellValue("--- DEFENCE ---");
+        defHeader.createCell(12).setCellValue("");
+        defHeader.getCell(11).setCellStyle(headerStyle);
 
-        // Row 22: Tackles Won
-        XSSFRow row22 = getOrCreateRow(sheet, 22);
-        row22.createCell(10).setCellValue(m.homeTackles);
-        row22.createCell(11).setCellValue("Tackles Won");
-        row22.createCell(12).setCellValue(m.awayTackles);
-        row22.getCell(10).setCellStyle(centeredStyle);
-        row22.getCell(11).setCellStyle(labelStyle);
-        row22.getCell(12).setCellStyle(centeredStyle);
+        // Tackles Won
+        XSSFRow s14 = getOrCreateRow(sheet, statRow++);
+        s14.createCell(10).setCellValue(m.homeTackles);
+        s14.createCell(11).setCellValue("Tackles Won");
+        s14.createCell(12).setCellValue(m.awayTackles);
+        s14.getCell(10).setCellStyle(centeredStyle);
+        s14.getCell(11).setCellStyle(labelStyle);
+        s14.getCell(12).setCellStyle(centeredStyle);
 
-        // Row 23: Interceptions
-        XSSFRow row23 = getOrCreateRow(sheet, 23);
-        row23.createCell(10).setCellValue(m.homeInterceptions.isEmpty() ? "0" : m.homeInterceptions);
-        row23.createCell(11).setCellValue("Interceptions");
-        row23.createCell(12).setCellValue(m.awayInterceptions.isEmpty() ? "0" : m.awayInterceptions);
-        row23.getCell(10).setCellStyle(centeredStyle);
-        row23.getCell(11).setCellStyle(labelStyle);
-        row23.getCell(12).setCellStyle(centeredStyle);
+        // Blocks
+        XSSFRow s15 = getOrCreateRow(sheet, statRow++);
+        s15.createCell(10).setCellValue(m.homeBlocks.isEmpty() ? "0" : m.homeBlocks);
+        s15.createCell(11).setCellValue("Blocks");
+        s15.createCell(12).setCellValue(m.awayBlocks.isEmpty() ? "0" : m.awayBlocks);
+        s15.getCell(10).setCellStyle(centeredStyle);
+        s15.getCell(11).setCellStyle(labelStyle);
+        s15.getCell(12).setCellStyle(centeredStyle);
 
-        // Row 24: Clearances
-        XSSFRow row24 = getOrCreateRow(sheet, 24);
-        row24.createCell(10).setCellValue(m.homeClearances.isEmpty() ? "0" : m.homeClearances);
-        row24.createCell(11).setCellValue("Clearances");
-        row24.createCell(12).setCellValue(m.awayClearances.isEmpty() ? "0" : m.awayClearances);
-        row24.getCell(10).setCellStyle(centeredStyle);
-        row24.getCell(11).setCellStyle(labelStyle);
-        row24.getCell(12).setCellStyle(centeredStyle);
+        // Interceptions
+        XSSFRow s16 = getOrCreateRow(sheet, statRow++);
+        s16.createCell(10).setCellValue(m.homeInterceptions.isEmpty() ? "0" : m.homeInterceptions);
+        s16.createCell(11).setCellValue("Interceptions");
+        s16.createCell(12).setCellValue(m.awayInterceptions.isEmpty() ? "0" : m.awayInterceptions);
+        s16.getCell(10).setCellStyle(centeredStyle);
+        s16.getCell(11).setCellStyle(labelStyle);
+        s16.getCell(12).setCellStyle(centeredStyle);
 
-        // Row 25: Blocks
-        XSSFRow row25 = getOrCreateRow(sheet, 25);
-        row25.createCell(10).setCellValue(m.homeBlocks.isEmpty() ? "0" : m.homeBlocks);
-        row25.createCell(11).setCellValue("Blocks");
-        row25.createCell(12).setCellValue(m.awayBlocks.isEmpty() ? "0" : m.awayBlocks);
-        row25.getCell(10).setCellStyle(centeredStyle);
-        row25.getCell(11).setCellStyle(labelStyle);
-        row25.getCell(12).setCellStyle(centeredStyle);
+        // Clearances
+        XSSFRow s17 = getOrCreateRow(sheet, statRow++);
+        s17.createCell(10).setCellValue(m.homeClearances.isEmpty() ? "0" : m.homeClearances);
+        s17.createCell(11).setCellValue("Clearances");
+        s17.createCell(12).setCellValue(m.awayClearances.isEmpty() ? "0" : m.awayClearances);
+        s17.getCell(10).setCellStyle(centeredStyle);
+        s17.getCell(11).setCellStyle(labelStyle);
+        s17.getCell(12).setCellStyle(centeredStyle);
 
-        // Row 26: Aerial Duels Won
-        XSSFRow row26 = getOrCreateRow(sheet, 26);
-        row26.createCell(10).setCellValue(m.homeAerials.isEmpty() ? "0" : m.homeAerials);
-        row26.createCell(11).setCellValue("Aerial Duels Won");
-        row26.createCell(12).setCellValue(m.awayAerials.isEmpty() ? "0" : m.awayAerials);
-        row26.getCell(10).setCellStyle(centeredStyle);
-        row26.getCell(11).setCellStyle(labelStyle);
-        row26.getCell(12).setCellStyle(centeredStyle);
+        // Saves
+        XSSFRow s18 = getOrCreateRow(sheet, statRow++);
+        s18.createCell(10).setCellValue(m.homeSaves);
+        s18.createCell(11).setCellValue("Saves");
+        s18.createCell(12).setCellValue(m.awaySaves);
+        s18.getCell(10).setCellStyle(centeredStyle);
+        s18.getCell(11).setCellStyle(labelStyle);
+        s18.getCell(12).setCellStyle(centeredStyle);
 
-        // Row 27: Saves
-        XSSFRow row27 = getOrCreateRow(sheet, 27);
-        row27.createCell(10).setCellValue(m.homeSaves);
-        row27.createCell(11).setCellValue("Saves");
-        row27.createCell(12).setCellValue(m.awaySaves);
-        row27.getCell(10).setCellStyle(centeredStyle);
-        row27.getCell(11).setCellStyle(labelStyle);
-        row27.getCell(12).setCellStyle(centeredStyle);
+        // === PHYSICAL === (Header) - NEW SECTION
+        XSSFRow physHeader = getOrCreateRow(sheet, statRow++);
+        physHeader.createCell(10).setCellValue("");
+        physHeader.createCell(11).setCellValue("--- PHYSICAL ---");
+        physHeader.createCell(12).setCellValue("");
+        physHeader.getCell(11).setCellStyle(headerStyle);
+
+        // Dribbles
+        XSSFRow s19 = getOrCreateRow(sheet, statRow++);
+        s19.createCell(10).setCellValue(m.homeDribbles.isEmpty() ? "0" : m.homeDribbles);
+        s19.createCell(11).setCellValue("Dribbles");
+        s19.createCell(12).setCellValue(m.awayDribbles.isEmpty() ? "0" : m.awayDribbles);
+        s19.getCell(10).setCellStyle(centeredStyle);
+        s19.getCell(11).setCellStyle(labelStyle);
+        s19.getCell(12).setCellStyle(centeredStyle);
+
+        // Successful Dribbles
+        XSSFRow s20 = getOrCreateRow(sheet, statRow++);
+        s20.createCell(10).setCellValue(m.homeDribblesCompleted.isEmpty() ? "0" : m.homeDribblesCompleted);
+        s20.createCell(11).setCellValue("Successful Dribbles");
+        s20.createCell(12).setCellValue(m.awayDribblesCompleted.isEmpty() ? "0" : m.awayDribblesCompleted);
+        s20.getCell(10).setCellStyle(centeredStyle);
+        s20.getCell(11).setCellStyle(labelStyle);
+        s20.getCell(12).setCellStyle(centeredStyle);
+
+        // Aerial Duels Won
+        XSSFRow s21 = getOrCreateRow(sheet, statRow++);
+        s21.createCell(10).setCellValue(m.homeAerials.isEmpty() ? "0" : m.homeAerials);
+        s21.createCell(11).setCellValue("Aerial Duels Won");
+        s21.createCell(12).setCellValue(m.awayAerials.isEmpty() ? "0" : m.awayAerials);
+        s21.getCell(10).setCellStyle(centeredStyle);
+        s21.getCell(11).setCellStyle(labelStyle);
+        s21.getCell(12).setCellStyle(centeredStyle);
+
+        // Distance Covered
+        XSSFRow s22 = getOrCreateRow(sheet, statRow++);
+        s22.createCell(10).setCellValue("N/A");
+        s22.createCell(11).setCellValue("Distance Covered");
+        s22.createCell(12).setCellValue("N/A");
+        s22.getCell(10).setCellStyle(centeredStyle);
+        s22.getCell(11).setCellStyle(labelStyle);
+        s22.getCell(12).setCellStyle(centeredStyle);
+
+        // === DISCIPLINE === (Header) - MOVED TO END
+        XSSFRow discHeader = getOrCreateRow(sheet, statRow++);
+        discHeader.createCell(10).setCellValue("");
+        discHeader.createCell(11).setCellValue("--- DISCIPLINE ---");
+        discHeader.createCell(12).setCellValue("");
+        discHeader.getCell(11).setCellStyle(headerStyle);
+
+        // Yellow Cards
+        XSSFRow s23 = getOrCreateRow(sheet, statRow++);
+        s23.createCell(10).setCellValue(m.homeYellowCards);
+        s23.createCell(11).setCellValue("Yellow Cards");
+        s23.createCell(12).setCellValue(m.awayYellowCards);
+        s23.getCell(10).setCellStyle(centeredStyle);
+        s23.getCell(11).setCellStyle(labelStyle);
+        s23.getCell(12).setCellStyle(centeredStyle);
+
+        // Red Cards
+        XSSFRow s24 = getOrCreateRow(sheet, statRow++);
+        s24.createCell(10).setCellValue(m.homeRedCards);
+        s24.createCell(11).setCellValue("Red Cards");
+        s24.createCell(12).setCellValue(m.awayRedCards);
+        s24.getCell(10).setCellStyle(centeredStyle);
+        s24.getCell(11).setCellStyle(labelStyle);
+        s24.getCell(12).setCellStyle(centeredStyle);
+
+        // Fouls
+        XSSFRow s25 = getOrCreateRow(sheet, statRow++);
+        s25.createCell(10).setCellValue(m.homeFouls);
+        s25.createCell(11).setCellValue("Fouls");
+        s25.createCell(12).setCellValue(m.awayFouls);
+        s25.getCell(10).setCellStyle(centeredStyle);
+        s25.getCell(11).setCellStyle(labelStyle);
+        s25.getCell(12).setCellStyle(centeredStyle);
+
+        // Offsides
+        XSSFRow s26 = getOrCreateRow(sheet, statRow++);
+        s26.createCell(10).setCellValue(m.homeOffsides);
+        s26.createCell(11).setCellValue("Offsides");
+        s26.createCell(12).setCellValue(m.awayOffsides);
+        s26.getCell(10).setCellStyle(centeredStyle);
+        s26.getCell(11).setCellStyle(labelStyle);
+        s26.getCell(12).setCellStyle(centeredStyle);
 
         // Auto-size ALL columns (A to P = indices 0 to 15)
         for (int i = 0; i <= 15; i++) {
