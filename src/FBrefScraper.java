@@ -1718,12 +1718,16 @@ public class FBrefScraper {
 
             if (i < homePlayers.length && !homePlayers[i].trim().isEmpty()) {
                 XSSFCell homeCell = playerRow.createCell(7);
-                homeCell.setCellValue((i + 1) + ". " + homePlayers[i].trim());
+                // Remove leading numbers like "1.", "23." etc.
+                String cleanName = homePlayers[i].trim().replaceAll("^\\d+\\.\\s*", "");
+                homeCell.setCellValue(cleanName);
             }
 
             if (i < awayPlayers.length && !awayPlayers[i].trim().isEmpty()) {
                 XSSFCell awayCell = playerRow.createCell(8);
-                awayCell.setCellValue((i + 1) + ". " + awayPlayers[i].trim());
+                // Remove leading numbers like "1.", "23." etc.
+                String cleanName = awayPlayers[i].trim().replaceAll("^\\d+\\.\\s*", "");
+                awayCell.setCellValue(cleanName);
             }
         }
 
@@ -1742,8 +1746,8 @@ public class FBrefScraper {
         // ========== ZONE C2: Substitutes (below Managers) ==========
         int subsStartRow = mgrRow + 3; // 1 row gap after Managers
         XSSFRow subsHeaderRow = getOrCreateRow(sheet, subsStartRow);
-        subsHeaderRow.createCell(7).setCellValue("Home Bench");
-        subsHeaderRow.createCell(8).setCellValue("Away Bench");
+        subsHeaderRow.createCell(7).setCellValue("Substitutes");
+        subsHeaderRow.createCell(8).setCellValue("Substitutes");
         subsHeaderRow.getCell(7).setCellStyle(headerStyle);
         subsHeaderRow.getCell(8).setCellStyle(headerStyle);
 
@@ -1815,25 +1819,25 @@ public class FBrefScraper {
         row6.getCell(11).setCellStyle(labelStyle);
         row6.getCell(12).setCellStyle(centeredStyle);
 
-        // === DISCIPLINE === (Header)
+        // === ATTACK === (Header) - MOVED UP IN ORDER
         row7.createCell(10).setCellValue("");
-        row7.createCell(11).setCellValue("--- DISCIPLINE ---");
+        row7.createCell(11).setCellValue("--- ATTACK ---");
         row7.createCell(12).setCellValue("");
         row7.getCell(11).setCellStyle(headerStyle);
 
-        // Row 8: Fouls
-        row8x.createCell(10).setCellValue(m.homeFouls);
-        row8x.createCell(11).setCellValue("Fouls");
-        row8x.createCell(12).setCellValue(m.awayFouls);
+        // Row 8: Big Chances
+        row8x.createCell(10).setCellValue(m.homeBigChances.isEmpty() ? "0" : m.homeBigChances);
+        row8x.createCell(11).setCellValue("Big Chances");
+        row8x.createCell(12).setCellValue(m.awayBigChances.isEmpty() ? "0" : m.awayBigChances);
         row8x.getCell(10).setCellStyle(centeredStyle);
         row8x.getCell(11).setCellStyle(labelStyle);
         row8x.getCell(12).setCellStyle(centeredStyle);
 
-        // Row 9: Offsides
+        // Row 9: Hit Woodwork
         XSSFRow row9 = getOrCreateRow(sheet, 9);
-        row9.createCell(10).setCellValue(m.homeOffsides);
-        row9.createCell(11).setCellValue("Offsides");
-        row9.createCell(12).setCellValue(m.awayOffsides);
+        row9.createCell(10).setCellValue(m.homeWoodwork.isEmpty() ? "0" : m.homeWoodwork);
+        row9.createCell(11).setCellValue("Hit Woodwork");
+        row9.createCell(12).setCellValue(m.awayWoodwork.isEmpty() ? "0" : m.awayWoodwork);
         row9.getCell(10).setCellStyle(centeredStyle);
         row9.getCell(11).setCellStyle(labelStyle);
         row9.getCell(12).setCellStyle(centeredStyle);
@@ -2185,5 +2189,15 @@ public class FBrefScraper {
         String awayThroughBalls = "";
         String homeLongBalls = "";
         String awayLongBalls = "";
+
+        // Physical Stats (NEW)
+        String homeTouches = "";
+        String awayTouches = "";
+        String homeTouchesOppBox = ""; // Touches in Opp Penalty Area
+        String awayTouchesOppBox = "";
+        String homeDribbles = "";
+        String awayDribbles = "";
+        String homeDribblesCompleted = "";
+        String awayDribblesCompleted = "";
     }
 }
