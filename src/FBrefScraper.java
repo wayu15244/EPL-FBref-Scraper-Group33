@@ -179,7 +179,7 @@ public class FBrefScraper {
         // === USE CUSTOM CHROME PROFILE for scraper ===
         // This creates a persistent profile that can store cookies
         String userHome = System.getProperty("user.home");
-        String scraperProfilePath = userHome + "\\AppData\\Local\\FBrefScraper\\ChromeProfile";
+        String scraperProfilePath = userHome + "\\AppData\\Local\\FBrefScraper\\ChromeProfile_v2";
         options.addArguments("--user-data-dir=" + scraperProfilePath);
 
         // === STEALTH MODE: Hide automation signals ===
